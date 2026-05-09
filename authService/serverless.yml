@@ -1,0 +1,63 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: tawseen
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: authService
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  environment:
+    CLIENT_ID: ${ssm:/CLIENT_ID}
+    REGION: ap-southeast-2
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+      Resource: "arn:aws:dynamodb:ap-southeast-2:*:table/Users"
+
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+
+resources:
+  Resources:
+    # Add the resources you want to deploy here.
+    # For example, you can add DynamoDB tables, S3 buckets, etc.
+    # Read the docs for more details: https://www.serverless.com/framework/docs/providers/aws/guide/resources
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Users
+        AttributeDefinitions:
+          - AttributeName: userId #unique identifier for each user
+            AttributeType: S #'S' for string, 'N' for number, 'B' for binary
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH #HASH key is the primary key for the table
+        BillingMode: PAY_PER_REQUEST #Automatically scales with usage
+
+functions:
+  signup:
+    handler: handlers/signUp.signUp
+    events:
+      - httpApi:
+          path: /signup
+          method: post
+  confirmSignUp:
+    handler: handlers/confirmSignUp.confirmSignUp
+    events:
+      - httpApi:
+          path: /confirm-sign-up
+          method: post
+  signIn:
+    handler: handlers/signIn.signIn
+    events:
+      - httpApi:
+          path: /sign-in
+          method: post
+  signOut:
+    handler: handlers/signOut.signOut
+    events:
+      - httpApi:
+          path: /sign-out
+          method: post

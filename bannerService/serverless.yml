@@ -1,0 +1,59 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: tawseen
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: bannerService
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-southeast-2
+  environment:
+    BUCKET_NAME: banner-images-neela-dev-bucket
+    REGION: ap-southeast-2
+    DYNAMODB_TABLE: Banners
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource: "arn:aws:s3:::banner-images-neela-dev-bucket/*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+      Resource: "arn:aws:dynamodb:ap-southeast-2:*:table/Banners"
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+
+resources:
+  Resources:
+    BannerImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: banner-images-neela-dev-bucket # it need to be unique across all AWS accounts and regions
+      DeletionPolicy: Retain # This will prevent the bucket from being deleted when you remove the service. Remove this line if you want the bucket to be deleted.
+    BannersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Banners
+        AttributeDefinitions:
+          - AttributeName: fileName
+            AttributeType: S
+        KeySchema:
+          - AttributeName: fileName
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+functions:
+  uploadBanner:
+    handler: handlers/uploadBanner.getUploadUrl
+    events:
+      - httpApi:
+          path: /upload-banner
+          method: post
+  confirmUpload:
+    handler: handlers/confirmUpload.confirmUpload
+    events:
+      - s3:
+          bucket: banner-images-neela-dev-bucket
+          event: s3:ObjectCreated:Put
+          existing: true
