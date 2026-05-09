@@ -1,5 +1,5 @@
 # "org" ensures this Service is used with the correct Serverless Framework Access Key.
-org: tawseen
+org: codenplay
 # "service" is the name of this project. This will also be added to your AWS resource names.
 service: categoryService
 
@@ -11,6 +11,7 @@ provider:
     BUCKET_NAME: category-images-neela-dev-bucket
     REGION: ap-southeast-2
     DYNAMODB_TABLE: Categories
+    SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-2:017341176574:category-cleanup-topic
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -23,18 +24,24 @@ provider:
         - "dynamodb:Scan"
         - "dynamodb:DeleteItem"
       Resource: "arn:aws:dynamodb:ap-southeast-2:017341176574:table/Categories"
+    - Effect: "Allow"
+      Action:
+        - "sns:Publish"
+      Resource: "arn:aws:sns:ap-southeast-2:017341176574:category-cleanup-topic"
+
+      
   # Uncomment to easily set up a custom domain. Read the docs for more details:
   # https://www.serverless.com/framework/docs/providers/aws/guide/domains
   # domain: api.example.com
 
 resources:
   Resources:
-    CategoryImagesBucket:
+    CategoryImagesBucket:   # This is the S3 bucket that will be used to store the category images
       Type: AWS::S3::Bucket
       Properties:
         BucketName: category-images-neela-dev-bucket # it need to be unique across all AWS accounts and regions
       DeletionPolicy: Retain # This will prevent the bucket from being deleted when you remove the service. Remove this line if you want the bucket to be deleted.
-    CategoryTable:
+    CategoryTable:    # This is the DynamoDB table that will be used to store the category data
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: Categories
@@ -45,6 +52,16 @@ resources:
           - AttributeName: fileName
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+    CategoryCleanupTopic:      # This is the SNS topic that will be used to trigger the cleanupCategories function
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: category-cleanup-topic
+    CategoryCleanupSubscription:   # This is the subscription that will trigger the cleanupCategories function when a message is published to the SNS topic
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn: arn:aws:sns:ap-southeast-2:017341176574:category-cleanup-topic  #!Ref CategoryCleanupTopic
+        Protocol: email
+        Endpoint: kkfneela@hotmail.com # Change this to your email address to receive notifications when the cleanupCategories function is triggered
 
 functions:
   getUploadUrl:

@@ -1,0 +1,79 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: codenplay
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: productService
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-southeast-2
+  environment:
+    BUCKET_NAME: product-images-neela-dev-bucket
+    REGION: ap-southeast-2
+    DYNAMODB_TABLE: Products
+    SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-2:017341176574:product-cleanup-topic
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource: "arn:aws:s3:::product-images-neela-dev-bucket/*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:Scan"
+        - "dynamodb:DeleteItem"
+      Resource: "arn:aws:dynamodb:ap-southeast-2:017341176574:table/Products"
+
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+resources:
+  Resources:
+    ProductImagesBucket:   # This is the S3 bucket that will be used to store the product images
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: product-images-neela-dev-bucket # it need to be unique across all AWS accounts and regions
+      DeletionPolicy: Retain # This will prevent the bucket from being deleted when you remove the service. Remove this line if you want the bucket to be deleted.
+    ProductTable:    # This is the DynamoDB table that will be used to store the product data
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Products
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+    ProductCleanupTopic:     
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: product-cleanup-topic
+    ProductCleanupSubscription:  
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn: arn:aws:sns:ap-southeast-2:017341176574:product-cleanup-topic 
+        Protocol: email
+        Endpoint: kkfneela@hotmail.com 
+
+functions:
+  getUploadUrl:
+     handler: handlers/getUploadUrl.getUploadUrl
+     events:
+       - httpApi:
+           path: /upload-url
+           method: post
+
+  updateProductImage:
+     handler: handlers/updateProductImage.updateProductImage
+     events:
+       - s3:
+           bucket: product-images-neela-dev-bucket
+           event: s3:ObjectCreated:*
+           existing: true   #if bucket is already created, set existing to true to avoid CloudFormation error. If bucket is not created yet, remove this line.
+  cleanupProducts:
+     handler: handlers/cleanupProducts.cleanupProducts
+     events:
+       - schedule:
+           rate: rate(2 minutes)  # This will trigger the cleanupProducts function every hour to clean up outdated products from the DynamoDB table. You can adjust the rate as needed (e.g., rate(30 minutes), rate(1 day), etc.).

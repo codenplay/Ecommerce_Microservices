@@ -8,16 +8,16 @@ const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 const dynamoDBClient = new DynamoDBClient({ region: process.env.REGION });
 const snsClient = new SNSClient({ region: process.env.REGION });
 
-//Define the cleanup functionto remove outdated categories from the DynamoDB table
-exports.cleanupCategories = async (event) => {
+//Define the cleanup functionto remove outdated products from the DynamoDB table
+exports.cleanupProducts = async (event) => {
   try {
     const tableName = process.env.DYNAMODB_TABLE;
     const snsTopicArn = process.env.SNS_TOPIC_ARN;
 
-    //Calculate the timestampfor 1 hour ago(to filter outdated categories)
+    //Calculate the timestampfor 1 hour ago(to filter outdated products)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-    //Create a scan command to find categories that are older than 1 hour
+    //Create a scan command to find products that are older than 1 hour
     // and do not have an imageUrl attribute (indicating that the image upload was not completed)
     const scanCommand = new ScanCommand({
       TableName: tableName,
@@ -36,17 +36,17 @@ exports.cleanupCategories = async (event) => {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: "No outdated categories found for cleanup",
+          message: "No outdated products found for cleanup",
         }),
       };
     }
 
-    //initialize a counter to track the number of deleted categories
+    //initialize a counter to track the number of deleted products
     let deletedCount = 0;
 
-    //Iterate through the outdated categories and delete them from the DynamoDB table
+    //Iterate through the outdated products and delete them from the DynamoDB table
     for (const item of Items) {
-      //Create a delete command using the category's primary key (fileName in this case) to identify the item to be deleted
+      //Create a delete command using the product's primary key (fileName in this case) to identify the item to be deleted
       const deleteCommand = new DeleteItemCommand({
         TableName: tableName,
         Key: {
@@ -58,23 +58,23 @@ exports.cleanupCategories = async (event) => {
     }
 
     // Publish a message to the SNS topic to notify about the cleanup
-    const snsMessage = `Outdated categories cleaned up successfully. Total deleted: ${deletedCount}`;
+    const snsMessage = `Outdated products cleaned up successfully. Total deleted: ${deletedCount}`;
     const publishCommand = new PublishCommand({
       TopicArn: snsTopicArn,
       Message: snsMessage,
-      Subject: "Category Cleanup Notification",
+      Subject: "Product Cleanup Notification",
     });
     await snsClient.send(publishCommand);
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: "Outdated categories cleaned up successfully",
+        message: "Outdated products cleaned up successfully",
         deletedCount,
       }),
     };
   } catch (error) {
-    console.error("Error cleaning up categories:", error);
+    console.error("Error cleaning up products:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({ message: "Internal server error" }),
