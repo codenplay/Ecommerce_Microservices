@@ -1,11 +1,12 @@
 # "org" ensures this Service is used with the correct Serverless Framework Access Key.
-org: tawseen
+org: codenplay
 # "service" is the name of this project. This will also be added to your AWS resource names.
 service: authService
 
 provider:
   name: aws
   runtime: nodejs22.x
+  region: ap-southeast-2
   environment:
     CLIENT_ID: ${ssm:/CLIENT_ID}
     REGION: ap-southeast-2
@@ -60,4 +61,16 @@ functions:
     events:
       - httpApi:
           path: /sign-out
+          method: post
+  resetPassword:
+    handler: handlers/forgotPassword.forgotPassword
+    events:
+      - httpApi:
+          path: /reset-password
+          method: post
+  confirmForgotPassword:
+    handler: handlers/confirmForgotPassword.confirmForgotPassword
+    events:
+      - httpApi:
+          path: /confirm-forgot-password
           method: post

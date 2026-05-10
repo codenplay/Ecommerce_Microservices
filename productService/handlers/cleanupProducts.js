@@ -43,14 +43,13 @@ exports.cleanupProducts = async (event) => {
 
     //initialize a counter to track the number of deleted products
     let deletedCount = 0;
-
     //Iterate through the outdated products and delete them from the DynamoDB table
     for (const item of Items) {
-      //Create a delete command using the product's primary key (fileName in this case) to identify the item to be deleted
+      //Create a delete command using the product's primary key (id in this case) to identify the item to be deleted
       const deleteCommand = new DeleteItemCommand({
         TableName: tableName,
         Key: {
-          fileName: { S: item.fileName.S }, //Assuming fileName is the primary key
+          id: { S: item.id.S }, //Assuming id is the primary key
         },
       });
       await dynamoDBClient.send(deleteCommand);

@@ -7,6 +7,12 @@ provider:
   name: aws
   runtime: nodejs22.x
   region: ap-southeast-2
+  httpApi:
+    authorizers:
+      myCognitoAuth:
+        identitySource: "$request.header.Authorization"
+        issuerUrl: https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_GyNEyPD4R
+        audience: 4jnkt95l7aibo43fa8ahb7rqr6
   environment:
     BUCKET_NAME: product-images-neela-dev-bucket
     REGION: ap-southeast-2
@@ -24,6 +30,10 @@ provider:
         - "dynamodb:Scan"
         - "dynamodb:DeleteItem"
       Resource: "arn:aws:dynamodb:ap-southeast-2:017341176574:table/Products"
+    - Effect: "Allow"
+      Action:
+        - "sns:Publish"
+      Resource: "arn:aws:sns:ap-southeast-2:017341176574:product-cleanup-topic"
 
   # Uncomment to easily set up a custom domain. Read the docs for more details:
   # https://www.serverless.com/framework/docs/providers/aws/guide/domains
@@ -64,7 +74,16 @@ functions:
        - httpApi:
            path: /upload-url
            method: post
-
+           authorizer: 
+            name: myCognitoAuth
+  getApprovedProducts:
+     handler: handlers/getApprovedProducts.getApprovedProducts
+     events:
+       - httpApi:
+           path: /approved-products
+           method: get
+           #authorizer: 
+            #name: myCognitoAuth
   updateProductImage:
      handler: handlers/updateProductImage.updateProductImage
      events:
@@ -76,4 +95,4 @@ functions:
      handler: handlers/cleanupProducts.cleanupProducts
      events:
        - schedule:
-           rate: rate(2 minutes)  # This will trigger the cleanupProducts function every hour to clean up outdated products from the DynamoDB table. You can adjust the rate as needed (e.g., rate(30 minutes), rate(1 day), etc.).
+           rate: rate(12 hour)  # This will trigger the cleanupProducts function every hour to clean up outdated products from the DynamoDB table. You can adjust the rate as needed (e.g., rate(30 minutes), rate(1 day), etc.).
